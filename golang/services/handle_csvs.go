@@ -4,9 +4,44 @@ import (
 	"encoding/csv"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
+	"log"
 	"os"
 	"strconv"
 )
+
+func GetEndpoints() [][]string {
+	file, err := os.Open("endpoints.csv")
+	if err != nil {
+		log.Fatalln("getWatchList - Open:", err)
+	}
+	csvReader := csv.NewReader(file)
+	csvData, err := csvReader.ReadAll()
+	if err != nil {
+		log.Fatalln("getWatchList - ReadAll:", err)
+	}
+	err = file.Close()
+	if err != nil {
+		log.Fatalln("getWatchList - Close:", err)
+	}
+	return csvData
+}
+
+func GetWatchList() [][]string {
+	file, err := os.Open("watchlist.csv")
+	if err != nil {
+		log.Fatalln("getWatchList - Open:", err)
+	}
+	csvReader := csv.NewReader(file)
+	csvData, err := csvReader.ReadAll()
+	if err != nil {
+		log.Fatalln("getWatchList - ReadAll:", err)
+	}
+	err = file.Close()
+	if err != nil {
+		log.Fatalln("getWatchList - Close:", err)
+	}
+	return csvData
+}
 
 func AddContractWatchlist() (bool, error) {
 	file, err := os.OpenFile("watchlist.csv", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
@@ -17,7 +52,7 @@ func AddContractWatchlist() (bool, error) {
 	csvWriter := csv.NewWriter(file)
 	// loop for entering pair contract info
 	var pass string
-	inputs := make([]string, 2)
+	inputs := make([]string, 3)
 	exchanges := [3]string{"H", "T", "N"}
 	for {
 		fmt.Println("\n\nLiquidity Pool's Exchange")
@@ -36,7 +71,12 @@ func AddContractWatchlist() (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		fmt.Println("\n\tVerify Inputs\nExchange: ", inputs[0], "\nAddress: ", inputs[1])
+		fmt.Println("Liquidity Pool's Pair(Reserve0-Reserve1)")
+		_, err = fmt.Scanln(&inputs[2])
+		if err != nil {
+			return false, err
+		}
+		fmt.Println("\n\tVerify Inputs\nExchange: ", inputs[0], "\nAddress: ", inputs[1], "\nPair: ", inputs[2])
 		fmt.Println("1 - Valid inputs\n2 - Quit")
 		_, err = fmt.Scanln(&pass)
 		if err != nil {

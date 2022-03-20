@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -38,12 +39,13 @@ func main() {
 		}
 	}
 	if csvEdit {
-		fmt.Println("Update local contract info")
+		fmt.Println("...")
 		// services.UpdateLocalContractInfo()
 	}
 	ctxMain, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	services.Feed(ctxMain, endPoint)
-	fmt.Println("done")
+	fmt.Println("...")
+	time.Sleep(2 * time.Second)
 }
