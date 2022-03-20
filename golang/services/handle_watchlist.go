@@ -18,10 +18,10 @@ func AddContractWatchlist() (bool, error) {
 	// loop for entering pair contract info
 	var pass string
 	inputs := make([]string, 2)
-	exchanges := [3]string{"HERMES", "TETHYS", "NETSWAP"}
+	exchanges := [3]string{"H", "T", "N"}
 	for {
 		fmt.Println("\n\nLiquidity Pool's Exchange")
-		fmt.Println("1 - HERMES\n2 - TETHYS\n3 - NETSWAP")
+		fmt.Println("1 - H\n2 - T\n3 - N")
 		_, err = fmt.Scanln(&inputs[0])
 		if err != nil {
 			return false, err

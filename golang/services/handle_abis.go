@@ -1,9 +1,11 @@
 package services
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"github.com/gocolly/colly"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -24,11 +26,29 @@ func UpdateLocalContractInfo() {
 	//fetchInfo(csvData)
 }
 
+func getEndpoints() [][]string {
+	file, err := os.Open("endpoints.csv")
+	if err != nil {
+		log.Fatalln("getWatchList - Open:", err)
+	}
+	csvReader := csv.NewReader(file)
+	csvData, err := csvReader.ReadAll()
+	if err != nil {
+		log.Fatalln("getWatchList - ReadAll:", err)
+	}
+	err = file.Close()
+	if err != nil {
+		log.Fatalln("getWatchList - Close:", err)
+	}
+	return csvData
+}
+
 func fetchInfo(csvData [][]string) {
-	theURL := "https://andromeda-explorer.metis.io/address/"
-	c := colly.NewCollector(colly.AllowedDomains("andromeda-explorer.metis.io"), colly.Async(true))
+	endPoints := getEndpoints()
+	theURL := endPoints[1][0]
+	c := colly.NewCollector(colly.AllowedDomains(endPoints[1][1]), colly.Async(true))
 	c.Limit(&colly.LimitRule{
-		DomainGlob:  "andromeda-explorer.metis.io/*",
+		DomainGlob:  endPoints[1][1] + "/*",
 		Delay:       1 * time.Second,
 		Parallelism: 2,
 	})
