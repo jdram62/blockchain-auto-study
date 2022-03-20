@@ -7,8 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
-	uni "github.com/jdram62/blockchain-auto-study/contracts/uniV2"
 	"log"
 )
 
@@ -21,12 +19,10 @@ func Feed(ctxMain context.Context, endPoint *string) {
 		*endPoint = GetEndpoints()[0][0]
 	}
 	// Connect client
-	clientRpc, err := rpc.DialContext(ctxMain, *endPoint)
+	clientEth, err := ethclient.DialContext(ctxMain, *endPoint)
 	if err != nil {
 		log.Fatalln("Feed - DialContext:", err)
 	}
-	defer clientRpc.Close()
-	clientEth := ethclient.NewClient(clientRpc)
 	defer clientEth.Close()
 	// get addresses from watchlist for subscription filter
 	var addressesWatch []common.Address
@@ -40,32 +36,25 @@ func Feed(ctxMain context.Context, endPoint *string) {
 		log.Fatalln("Feed - NewUniswapV2ERC20:", err)
 	}
 	logs := make(chan types.Log)
-	// possibly creat a new ctx
+	//ctx, cancel := context.WithCancel(ctxMain)
 	sub, err := clientEth.SubscribeFilterLogs(ctxMain, query, logs)
 	if err != nil {
 		log.Fatalln("Feed - SubscribeNewHead:", err)
 	}
 	defer sub.Unsubscribe()
-	var poolInstance *uni.UniswapV2ERC20
+	var tx common.Hash
 	for {
 		select {
 		default:
+		case swap := <-logs:
+			if swap.TxHash != tx {
+				tx = swap.TxHash
+				go Quote(ctxMain, clientEth, &swap.Address, &swap.TxHash)
+			}
 		case <-ctxMain.Done():
 			return
 		case err = <-sub.Err():
 			fmt.Println(err, "new sub ")
-		case swap := <-logs:
-			// Check lp reserves of the swap
-			poolInstance, err = uni.NewUniswapV2ERC20(swap.Address, clientEth)
-			if err != nil {
-				log.Fatalln("Feed - NewUniswapV2ERC20")
-			}
-			reserves, _ := poolInstance.GetReserves(nil)
-			if err != nil {
-				log.Fatalln("Feed - GetReserves")
-			}
-			fmt.Println("addy: ", swap.Address, "lp reserves: ", reserves)
 		}
-
 	}
 }

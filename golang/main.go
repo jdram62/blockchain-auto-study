@@ -44,8 +44,8 @@ func main() {
 	}
 	ctxMain, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-
 	services.Feed(ctxMain, endPoint)
 	fmt.Println("...")
 	time.Sleep(2 * time.Second)
+
 }
