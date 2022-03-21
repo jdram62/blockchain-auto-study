@@ -13,6 +13,16 @@ import (
 	"time"
 )
 
+/*WIP:
+format watchlist.csv to contain : lp pools, addy0, addy1
+	sorted
+if have txhash discard copies
+price quote functions for different exchanges
+	consider orders smart routing
+trade  function will receive trigger of an address in channel
+	synchronize check
+*/
+
 func main() {
 	endPoint := flag.String("ep", "main", "Websocket RPC Endpoint")
 	var userInput int

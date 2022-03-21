@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"log"
+	"time"
 )
 
 func Feed(ctxMain context.Context, endPoint *string) {
@@ -36,25 +37,26 @@ func Feed(ctxMain context.Context, endPoint *string) {
 		log.Fatalln("Feed - NewUniswapV2ERC20:", err)
 	}
 	logs := make(chan types.Log)
-	//ctx, cancel := context.WithCancel(ctxMain)
-	sub, err := clientEth.SubscribeFilterLogs(ctxMain, query, logs)
+	ctx, cancel := context.WithTimeout(ctxMain, 10*time.Second)
+	sub, err := clientEth.SubscribeFilterLogs(ctx, query, logs)
 	if err != nil {
 		log.Fatalln("Feed - SubscribeNewHead:", err)
 	}
 	defer sub.Unsubscribe()
-	var tx common.Hash
+	var recentTxs common.Hash
 	for {
 		select {
 		default:
 		case swap := <-logs:
-			if swap.TxHash != tx {
-				tx = swap.TxHash
-				go Quote(ctxMain, clientEth, &swap.Address, &swap.TxHash)
+			if recentTxs != swap.TxHash {
+				recentTxs = swap.TxHash
+				go Quote(ctxMain, clientEth, swap.Address, swap.TxHash)
 			}
 		case <-ctxMain.Done():
+			cancel()
 			return
 		case err = <-sub.Err():
-			fmt.Println(err, "new sub ")
+			fmt.Println("Feed - sub.Err", err)
 		}
 	}
 }
