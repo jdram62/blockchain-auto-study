@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"log"
+	"runtime"
 	"time"
 )
 
@@ -19,6 +20,7 @@ func Feed(ctxMain context.Context, endPoint *string) {
 	} else {
 		*endPoint = GetEndpoints()[0][0]
 	}
+
 	// Connect client
 	clientEth, err := ethclient.DialContext(ctxMain, *endPoint)
 	if err != nil {
@@ -26,33 +28,37 @@ func Feed(ctxMain context.Context, endPoint *string) {
 	}
 	defer clientEth.Close()
 	// get addresses from watchlist for subscription filter
-	var addressesWatch []common.Address
-	for _, row := range watchList {
-		addressesWatch = append(addressesWatch, common.HexToAddress(row[1]))
-	}
+	//var addressesWatch []common.Address
+	//for _, row := range watchList {
+	//addressesWatch = append(addressesWatch, common.HexToAddress(row[0]))
+	//}
 	query := ethereum.FilterQuery{
-		Addresses: addressesWatch,
+		Addresses: []common.Address{common.HexToAddress("0xDd7dF3522a49e6e1127bf1A1d3bAEa3bc100583B")},
 	}
 	if err != nil {
 		log.Fatalln("Feed - NewUniswapV2ERC20:", err)
 	}
+	// transaction stream
 	logs := make(chan types.Log)
-	ctx, cancel := context.WithTimeout(ctxMain, 10*time.Second)
+	var recentBlock uint64 = 1
+	ctx, cancel := context.WithCancel(ctxMain)
 	sub, err := clientEth.SubscribeFilterLogs(ctx, query, logs)
 	if err != nil {
 		log.Fatalln("Feed - SubscribeNewHead:", err)
 	}
 	defer sub.Unsubscribe()
-	var recentTxs common.Hash
 	for {
+		ctxQ, stop := context.WithTimeout(ctxMain, time.Second*3)
 		select {
 		default:
 		case swap := <-logs:
-			if recentTxs != swap.TxHash {
-				recentTxs = swap.TxHash
-				go Quote(ctxMain, clientEth, swap.Address, swap.TxHash)
+			if swap.BlockNumber > recentBlock {
+				recentBlock = swap.BlockNumber
+				go Quote(ctxQ, watchList, clientEth, swap.Address)
+				fmt.Println("gos: ", runtime.NumGoroutine(), " index: ", swap.BlockNumber, " tx: ", swap.TxHash)
 			}
 		case <-ctxMain.Done():
+			stop()
 			cancel()
 			return
 		case err = <-sub.Err():

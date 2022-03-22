@@ -14,19 +14,13 @@ import (
 )
 
 /*WIP:
-format watchlist.csv to contain : lp pools, addy0, addy1
-	sorted
-if have txhash discard copies
 price quote functions for different exchanges
 	consider orders smart routing
-trade  function will receive trigger of an address in channel
-	synchronize check
 */
 
 func main() {
 	endPoint := flag.String("ep", "main", "Websocket RPC Endpoint")
 	var userInput int
-	csvEdit := false
 	for loop := true; loop; {
 		fmt.Println("\n\tWATCHLIST\n1 - Add Contract Address\n2 - Remove Contract Address\n3 - Continue")
 		_, err := fmt.Scanln(&userInput)
@@ -35,12 +29,12 @@ func main() {
 		}
 		switch userInput {
 		case 1:
-			csvEdit, err = services.AddContractWatchlist()
+			_, err = services.AddContractWatchlist()
 			if err != nil {
 				log.Fatalln("main - AddContractWatchlist", err)
 			}
 		case 2:
-			csvEdit, err = services.RemoveContractWatchlist()
+			_, err = services.RemoveContractWatchlist()
 			if err != nil {
 				log.Fatalln("main - RemoveContractWatchlist", err)
 			}
@@ -48,14 +42,10 @@ func main() {
 			loop = false
 		}
 	}
-	if csvEdit {
-		fmt.Println("...")
-		// services.UpdateLocalContractInfo()
-	}
+	fmt.Println("...")
 	ctxMain, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	services.Feed(ctxMain, endPoint)
 	fmt.Println("...")
 	time.Sleep(2 * time.Second)
-
 }

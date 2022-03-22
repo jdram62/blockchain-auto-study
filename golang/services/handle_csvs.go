@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"log"
 	"os"
-	"strconv"
 )
 
 func GetEndpoints() [][]string {
@@ -50,50 +49,41 @@ func AddContractWatchlist() (bool, error) {
 	}
 	defer file.Close()
 	csvWriter := csv.NewWriter(file)
-	// loop for entering pair contract info
 	var pass string
 	inputs := make([]string, 3)
-	exchanges := [3]string{"H", "T", "N"}
-	for {
-		fmt.Println("\n\nLiquidity Pool's Exchange")
-		fmt.Println("1 - H\n2 - T\n3 - N")
-		_, err = fmt.Scanln(&inputs[0])
+	fmt.Println("\n\nAdd New LP Contract to watchlist:")
+	fmt.Println("Pair Address")
+	_, err = fmt.Scanln(&inputs[0])
+	if err != nil {
+		return false, err
+	}
+	fmt.Println("Reserve0 Address")
+	_, err = fmt.Scanln(&inputs[1])
+	if err != nil {
+		return false, err
+	}
+	fmt.Println("Reserve1 Address")
+	_, err = fmt.Scanln(&inputs[2])
+	if err != nil {
+		return false, err
+	}
+	fmt.Println("\n\tVerify Inputs\nPair Address: ", inputs[0], "\nReserve0: ", inputs[1], "\nReserve1: ", inputs[2])
+	fmt.Println("1 - Valid inputs\nELSE - Quit")
+	_, err = fmt.Scanln(&pass)
+	if err != nil {
+		return false, err
+	}
+	switch pass {
+	case "1":
+		err = csvWriter.Write(inputs)
 		if err != nil {
 			return false, err
 		}
-		switch inputs[0] {
-		case "1", "2", "3":
-			ind, _ := strconv.Atoi(inputs[0])
-			inputs[0] = exchanges[ind-1]
-		}
-		fmt.Println("Liquidity Pool's Address")
-		_, err = fmt.Scanln(&inputs[1])
-		if err != nil {
-			return false, err
-		}
-		fmt.Println("Liquidity Pool's Pair(Reserve0-Reserve1)")
-		_, err = fmt.Scanln(&inputs[2])
-		if err != nil {
-			return false, err
-		}
-		fmt.Println("\n\tVerify Inputs\nExchange: ", inputs[0], "\nAddress: ", inputs[1], "\nPair: ", inputs[2])
-		fmt.Println("1 - Valid inputs\n2 - Quit")
-		_, err = fmt.Scanln(&pass)
-		if err != nil {
-			return false, err
-		}
-		switch pass {
-		case "1":
-			err = csvWriter.Write(inputs)
-			if err != nil {
-				return false, err
-			}
-			csvWriter.Flush()
-			fmt.Println("successful contract add")
-			return true, nil
-		case "2":
-			return false, nil
-		}
+		csvWriter.Flush()
+		fmt.Println("successful contract add")
+		return true, nil
+	default:
+		return false, nil
 	}
 }
 
@@ -104,49 +94,46 @@ func RemoveContractWatchlist() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	// read contents in prior to attempt delete contract, close file instantly after read
+	// read contents in prior to attempt to delete contract, close file instantly after read
 	csvReader := csv.NewReader(file)
 	csvData, err := csvReader.ReadAll()
 	err = file.Close()
 	if err != nil {
 		return false, err
 	}
+	rowsToWrite := make([][]string, len(csvData)-1)
+	fmt.Println("\n\nRemove lp Contract from watchlist:\nELSE - Quit")
+	_, err = fmt.Scanln(&userInput)
 	if err != nil {
 		return false, err
 	}
-	rowsToWrite := make([][]string, len(csvData)-1)
-	for loop := true; loop; {
-		fmt.Println("\n\nRemove lp from watchlist by contract address: ")
-		fmt.Println("1 - Quit")
-		_, err = fmt.Scanln(&userInput)
-		if err != nil {
-			return false, err
-		}
-		if userInput == "1" {
-			return false, nil
-		}
-		if common.IsHexAddress(userInput) {
-			for _, data := range csvData {
-				if data[1] == userInput {
-					loop = false
-				} else {
-					// error if csv rows <= 1
-					rowsToWrite[i] = data
-					i++
-				}
-			}
-		}
-	}
-	// address is confirmed in csv, empty contents
-	if err = os.Truncate("watchlist.csv", 0); err != nil {
+	// return if input is not address
+	if !common.IsHexAddress(userInput) {
 		return false, err
 	}
-	// write contents to csv, deleted entry is not included
-	file, err = os.OpenFile("watchlist.csv", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-	defer file.Close()
-	csvWriter := csv.NewWriter(file)
-	csvWriter.Flush()
-	err = csvWriter.WriteAll(rowsToWrite)
-	fmt.Println("successful contract removal")
-	return true, err
+	found := false
+	for _, data := range csvData {
+		if data[0] == userInput {
+			found = true
+		} else {
+			// error if csv rows <= 1
+			rowsToWrite[i] = data
+			i++
+		}
+	}
+	if found {
+		// address is confirmed in csv, empty contents
+		if err = os.Truncate("watchlist.csv", 0); err != nil {
+			return false, err
+		}
+		// write contents to csv, deleted entry is not included
+		file, err = os.OpenFile("watchlist.csv", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+		defer file.Close()
+		csvWriter := csv.NewWriter(file)
+		csvWriter.Flush()
+		err = csvWriter.WriteAll(rowsToWrite)
+		fmt.Println("successful contract removal")
+		return true, err
+	}
+	return false, nil
 }
